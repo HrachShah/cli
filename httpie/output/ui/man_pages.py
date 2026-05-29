@@ -27,7 +27,7 @@ def is_available(program: str) -> bool:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-    except Exception:
+    except OSError:
         # There might be some errors outside the process, e.g
         # a permission error to execute something that is not an
         # executable.
