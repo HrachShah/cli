@@ -49,8 +49,12 @@ def main(previous_release: str, current_release: str) -> int:
     try:
         committers = find_committers(since, until)
         reporters = find_reporters(since, until)
-    except Exception as exc:
-        # We want to save what we fetched so far. So pass.
+    except requests.RequestException as exc:
+        # fetch() only raises requests.exceptions.RequestException subclasses
+        # for network/HTTP failures (its inner retry loop handles 403 rate-limit
+        # via FinishedForNow). Real bugs like KeyError on a missing API field or
+        # NameError on a typo should propagate so the contributor data file does
+        # not get half-written with the wrong shape.
         print(' !! ', exc)
 
     try:
