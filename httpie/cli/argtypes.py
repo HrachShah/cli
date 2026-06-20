@@ -225,9 +225,20 @@ def parse_format_options(s: str, defaults: Optional[dict]) -> dict:
         if value in value_map:
             parsed_value = value_map[value]
         else:
-            if value.isnumeric():
+            # Use a strict int conversion rather than value.isnumeric():
+            # isnumeric() accepts unicode numerics like '½', '²', and
+            # Arabic-Indic digits like '٠'/'١' that int() cannot parse,
+            # and a Unicode value that did happen to round-trip through
+            # int() (Arabic-Indic) was inconsistent across Python builds
+            # and would still produce an option whose type didn't match
+            # the default_type check below when the default was a plain
+            # int. Falling back to int() with a try/except means anything
+            # isnumeric() let through but int() can't decode now raises
+            # a clear ArgumentTypeError naming the offending token, and
+            # the type-mismatch branch catches the rest.
+            try:
                 parsed_value = int(value)
-            else:
+            except ValueError:
                 parsed_value = value
 
         if defaults is None:

@@ -439,6 +439,9 @@ class TestFormatOptions:
             ('foo:2', 'invalid option'),
             ('foo.baz:2', 'invalid key'),
             ('foo.bar:false', 'expected int got bool'),
+            ('١٢٣:2', 'invalid option'),
+            ('٤٥٦:2', 'invalid option'),
+            ('٧٨٩:2', 'invalid option'),
         ]
     )
     def test_parse_format_options_errors(self, options_string, expected_error):
