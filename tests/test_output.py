@@ -426,6 +426,10 @@ class TestFormatOptions:
             ({'foo': {'bar': 1}}, 'foo.bar:2', {'foo': {'bar': 2}}),
             ({'foo': {'bar': True}}, 'foo.bar:false', {'foo': {'bar': False}}),
             ({'foo': {'bar': 'a'}}, 'foo.bar:b', {'foo': {'bar': 'b'}}),
+            # int() accepts a leading minus, so a negative integer should
+            # round-trip through the same try/except int(value) branch.
+            ({'foo': {'bar': 1}}, 'foo.bar:-2', {'foo': {'bar': -2}}),
+            ({'foo': {'bar': 0}}, 'foo.bar:-1', {'foo': {'bar': -1}}),
             # @formatter:on
         ]
     )
