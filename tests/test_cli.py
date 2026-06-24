@@ -14,7 +14,7 @@ from httpie.utils import load_json_preserve_order_and_dupe_keys
 
 from .fixtures import (
     FILE_CONTENT, FILE_PATH, FILE_PATH_ARG, JSON_FILE_CONTENT,
-    JSON_FILE_PATH_ARG,
+    JSON_FILE_PATH_ARG, patharg,
 )
 from .utils import HTTP_OK, MockEnvironment, StdinBytesIO, http
 
@@ -147,6 +147,71 @@ class TestItemParsing:
             ('text_field', 'a'),
             ('text_field', 'b'),
         ]
+
+
+class TestEmbeddedHeaderStripping:
+    """Embedded-file syntax (`Header:@path`, `param==@path`)
+
+The trimming previously only stripped `\\n`, leaving a stray `\\r` in the
+result for files saved with CRLF line endings (e.g. created on Windows or
+checked out with `core.autocrlf=true`). A header value of `Bearer abc\r`
+sent to an OAuth provider causes an opaque signature mismatch even though
+the token itself was correct in the source file."""
+
+    @pytest.mark.parametrize('line_ending, fixture_name', [
+        ('\n', 'lf'),
+        ('\r\n', 'crlf'),
+        ('\r', 'cr'),
+    ])
+    def test_embedded_header_strips_all_line_endings(self, tmp_path, line_ending, fixture_name):
+        token = 'Bearer abcdef1234567890'
+        file = tmp_path / f'token-{fixture_name}.txt'
+        file.write_bytes((token + line_ending).encode())
+
+        items = RequestItems.from_args([
+            self.key_value_arg('Authorization:@' + patharg(file)),
+        ])
+        assert dict(items.headers) == {'Authorization': token}
+
+    @pytest.mark.parametrize('line_ending, fixture_name', [
+        ('\n', 'lf'),
+        ('\r\n', 'crlf'),
+        ('\r', 'cr'),
+    ])
+    def test_embedded_query_param_strips_all_line_endings(self, tmp_path, line_ending, fixture_name):
+        token = 'opaque_value'
+        file = tmp_path / f'token-{fixture_name}.txt'
+        file.write_bytes((token + line_ending).encode())
+
+        items = RequestItems.from_args([
+            self.key_value_arg('api_key==@' + patharg(file)),
+        ])
+        assert dict(items.params) == {'api_key': token}
+
+    def test_embedded_header_preserves_trailing_newline_free_content(self, tmp_path):
+        # Make sure we don't strip trailing characters that are not newlines.
+        token = 'Bearer abcdef1234567890'
+        file = tmp_path / 'token-no-trailing.txt'
+        file.write_bytes(token.encode())
+
+        items = RequestItems.from_args([
+            self.key_value_arg('Authorization:@' + patharg(file)),
+        ])
+        assert dict(items.headers) == {'Authorization': token}
+
+    def test_embedded_header_strips_multiple_trailing_newlines(self, tmp_path):
+        token = 'Bearer abcdef1234567890'
+        file = tmp_path / 'token-trailing-newlines.txt'
+        file.write_bytes((token + '\r\n\r\n').encode())
+
+        items = RequestItems.from_args([
+            self.key_value_arg('Authorization:@' + patharg(file)),
+        ])
+        assert dict(items.headers) == {'Authorization': token}
+
+    @staticmethod
+    def key_value_arg(item):
+        return KeyValueArgType(*constants.SEPARATOR_GROUP_ALL_ITEMS)(item)
 
 
 class TestQuerystring:

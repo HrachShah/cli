@@ -128,7 +128,7 @@ def process_header_arg(arg: KeyValueArg) -> Optional[str]:
 
 
 def process_embed_header_arg(arg: KeyValueArg) -> str:
-    return load_text_file(arg).rstrip('\n')
+    return load_text_file(arg).rstrip('\r\n')
 
 
 def process_empty_header_arg(arg: KeyValueArg) -> str:
@@ -144,7 +144,7 @@ def process_query_param_arg(arg: KeyValueArg) -> str:
 
 
 def process_embed_query_param_arg(arg: KeyValueArg) -> str:
-    return load_text_file(arg).rstrip('\n')
+    return load_text_file(arg).rstrip('\r\n')
 
 
 def process_file_upload_arg(arg: KeyValueArg) -> Tuple[str, IO, str]:
