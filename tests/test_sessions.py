@@ -15,7 +15,12 @@ from httpie.encoding import UTF8
 from httpie.plugins import AuthPlugin
 from httpie.plugins.builtin import HTTPBasicAuth
 from httpie.plugins.registry import plugin_manager
-from httpie.sessions import Session
+from httpie.sessions import (
+    Session,
+    get_httpie_session,
+    session_hostname_to_dirname,
+    strip_port,
+)
 from httpie.utils import get_expired_cookies
 from .test_auth_plugins import basic_auth
 from .utils import DUMMY_HOST, HTTP_OK, MockEnvironment, http, mk_config_dir
@@ -850,3 +855,76 @@ def test_secure_cookies_on_localhost(mock_env, tmp_path, server, expected_cookie
         server + '/cookies'
     )
     assert r.json == {'cookies': expected_cookies}
+
+
+class TestStripPort:
+    @pytest.mark.parametrize(
+        ('hostname', 'expected'),
+        [
+            # Regular hostnames without port pass through unchanged.
+            ('example.com', 'example.com'),
+            ('localhost', 'localhost'),
+            ('localhost.', 'localhost.'),
+            ('', ''),
+            # Regular hostnames with port: the port suffix is removed.
+            ('example.com:8080', 'example.com'),
+            ('localhost:80', 'localhost'),
+            ('example.com.:80', 'example.com.'),
+            ('example.com:', 'example.com'),
+            # Bracketed IPv6 hosts are preserved without their bracketed port.
+            ('[::1]', '[::1]'),
+            ('[::1]:8080', '[::1]'),
+            ('[fe80::1%25eth0]', '[fe80::1%25eth0]'),
+            ('[fe80::1%25eth0]:8080', '[fe80::1%25eth0]'),
+            ('[::ffff:c000:0280]:443', '[::ffff:c000:0280]'),
+        ],
+    )
+    def test_strip_port(self, hostname, expected):
+        assert strip_port(hostname) == expected
+
+
+class TestGetHttpieSessionBoundHost:
+    """Verify that ``strip_port`` is applied to the ``bound_host`` passed
+    to the ``Session`` constructor even for IPv6 bracketed hosts.
+
+    The hostname-based directory layout (``session_hostname_to_dirname``)
+    intentionally keeps the port in the directory name so that two sessions
+    on different ports of the same host are stored separately, but the
+    ``bound_host`` attribute used in legacy warning messages and elsewhere
+    must be the host without the port. Before the fix, ``strip_port`` used
+    ``hostname.split(':')[0]`` which truncated bracketed IPv6 hosts to
+    ``'['`` and produced wrong ``bound_host`` values like ``'['`` for
+    ``'[::1]:8080'``.
+    """
+
+    def _session_for_url(self, url, session_name='mysession'):
+        env = MockEnvironment()
+        config_dir = Path('/tmp')  # not actually written; we only inspect the Session
+        session = get_httpie_session(
+            env=env,
+            config_dir=config_dir,
+            session_name=session_name,
+            host=None,
+            url=url,
+        )
+        return session
+
+    def test_bound_host_strips_port_for_ipv6(self):
+        session = self._session_for_url('http://[::1]:8080/')
+        assert session.bound_host == '[::1]'
+
+    def test_bound_host_strips_port_for_ipv6_no_port(self):
+        session = self._session_for_url('http://[::1]/')
+        assert session.bound_host == '[::1]'
+
+    def test_bound_host_strips_port_for_ipv6_with_zone(self):
+        session = self._session_for_url('http://[fe80::1%25eth0]:8080/')
+        assert session.bound_host == '[fe80::1%25eth0]'
+
+    def test_bound_host_strips_port_for_regular_hostname(self):
+        session = self._session_for_url('http://example.com:8080/')
+        assert session.bound_host == 'example.com'
+
+    def test_bound_host_passes_through_regular_hostname_without_port(self):
+        session = self._session_for_url('http://example.com/')
+        assert session.bound_host == 'example.com'

@@ -54,7 +54,33 @@ def session_hostname_to_dirname(hostname: str, session_name: str) -> str:
 
 
 def strip_port(hostname: str) -> str:
-    return hostname.split(':')[0]
+    """Strip a ``:port`` suffix from ``hostname`` while preserving
+    bracketed IPv6 literals (RFC 3986 ``host = IP-literal | IPv4address | reg-name``).
+
+    Returns the host part with brackets intact for IPv6 and without any
+    trailing port. Returns the original string if no port is present.
+    Returns an empty string unchanged.
+    """
+    if not hostname:
+        return hostname
+    # IPv6 literal: bracketed host may be followed by ':port'. The closing
+    # bracket separates the literal from the port, so split on the first ']'
+    # and only inspect the suffix that follows it.
+    if hostname.startswith('['):
+        closing = hostname.find(']')
+        if closing == -1:
+            return hostname
+        after = hostname[closing + 1:]
+        if not after:
+            return hostname
+        if after[0] == ':':
+            return hostname[:closing + 1]
+        # Trailing junk after ']' without ':' is malformed, but preserve the
+        # bracketed host part rather than discarding the brackets.
+        return hostname[:closing + 1]
+    # Plain hostname or IPv4: split on the first ':' only.
+    colon = hostname.find(':')
+    return hostname[:colon] if colon != -1 else hostname
 
 
 def materialize_cookie(cookie: Cookie) -> Dict[str, Any]:
