@@ -54,6 +54,14 @@ def session_hostname_to_dirname(hostname: str, session_name: str) -> str:
 
 
 def strip_port(hostname: str) -> str:
+    # Bracketed IPv6 hosts from urlsplit arrive as '[::1]' or '[::1]:8080'.
+    # Splitting on ':' would return only '[' (or '[2001' for full addresses),
+    # so handle the bracketed form explicitly before falling back to the
+    # standard host:port split for IPv4 / DNS hostnames.
+    if hostname.startswith('['):
+        end = hostname.find(']')
+        if end != -1:
+            return hostname[: end + 1]
     return hostname.split(':')[0]
 
 

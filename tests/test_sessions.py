@@ -15,7 +15,7 @@ from httpie.encoding import UTF8
 from httpie.plugins import AuthPlugin
 from httpie.plugins.builtin import HTTPBasicAuth
 from httpie.plugins.registry import plugin_manager
-from httpie.sessions import Session
+from httpie.sessions import Session, strip_port
 from httpie.utils import get_expired_cookies
 from .test_auth_plugins import basic_auth
 from .utils import DUMMY_HOST, HTTP_OK, MockEnvironment, http, mk_config_dir
@@ -850,3 +850,26 @@ def test_secure_cookies_on_localhost(mock_env, tmp_path, server, expected_cookie
         server + '/cookies'
     )
     assert r.json == {'cookies': expected_cookies}
+
+
+@pytest.mark.parametrize(
+    ('hostname', 'expected'),
+    [
+        # Plain hostnames (no port) are returned unchanged.
+        ('example.com', 'example.com'),
+        ('localhost', 'localhost'),
+        # Standard host:port pairs strip the port.
+        ('example.com:8080', 'example.com'),
+        ('localhost:3000', 'localhost'),
+        # Bracketed IPv6 hosts without a port round-trip unchanged.
+        ('[::1]', '[::1]'),
+        ('[2001:db8::1]', '[2001:db8::1]'),
+        ('[fe80::1%25eth0]', '[fe80::1%25eth0]'),
+        # Bracketed IPv6 hosts with a port drop the port but keep the brackets
+        # so the result is still a valid IPv6 host literal.
+        ('[::1]:8080', '[::1]'),
+        ('[2001:db8::1]:8443', '[2001:db8::1]'),
+    ],
+)
+def test_strip_port_ipv6_bracketed(hostname, expected):
+    assert strip_port(hostname) == expected
