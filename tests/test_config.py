@@ -34,6 +34,16 @@ def test_config_file_not_valid(httpbin):
 
 
 @pytest.mark.skipif(is_windows, reason='cannot chmod 000 on Windows')
+def test_config_file_must_contain_an_object(httpbin):
+    env = MockEnvironment()
+    env.create_temp_config_dir()
+    (env.config_dir / Config.FILENAME).write_text('[]', encoding=UTF8)
+    r = http(httpbin + '/get', env=env)
+    assert HTTP_OK in r
+    assert 'http: warning' in r.stderr
+    assert 'expected an object' in r.stderr
+
+
 def test_config_file_inaccessible(httpbin):
     env = MockEnvironment()
     env.create_temp_config_dir()

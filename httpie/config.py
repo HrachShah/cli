@@ -66,11 +66,16 @@ def read_raw_config(config_type: str, path: Path) -> Dict[str, Any]:
     try:
         with path.open(encoding=UTF8) as f:
             try:
-                return json.load(f)
+                data = json.load(f)
             except ValueError as e:
                 raise ConfigFileError(
                     f'invalid {config_type} file: {e} [{path}]'
                 )
+            if not isinstance(data, dict):
+                raise ConfigFileError(
+                    f'invalid {config_type} file: expected an object [{path}]'
+                )
+            return data
     except FileNotFoundError:
         pass
     except OSError as e:
