@@ -93,29 +93,32 @@ class RequestItems:
             ),
         }
 
-        if instance.is_json:
-            json_item_args, request_item_args = split_iterable(
-                iterable=request_item_args,
-                key=lambda arg: arg.sep in SEPARATOR_GROUP_NESTED_JSON_ITEMS
-            )
-            if json_item_args:
-                pairs = [(arg.key, rules[arg.sep][0](arg)) for arg in json_item_args]
-                processor_func, target_dict = rules[SEPARATOR_GROUP_NESTED_JSON_ITEMS]
-                value = processor_func(pairs)
-                target_dict.update(value)
+        try:
+            if instance.is_json:
+                json_item_args, request_item_args = split_iterable(
+                    iterable=request_item_args,
+                    key=lambda arg: arg.sep in SEPARATOR_GROUP_NESTED_JSON_ITEMS
+                )
+                if json_item_args:
+                    pairs = [(arg.key, rules[arg.sep][0](arg)) for arg in json_item_args]
+                    processor_func, target_dict = rules[SEPARATOR_GROUP_NESTED_JSON_ITEMS]
+                    value = processor_func(pairs)
+                    target_dict.update(value)
 
-        # Then handle all other items.
-        for arg in request_item_args:
-            processor_func, target_dict = rules[arg.sep]
-            value = processor_func(arg)
+            for arg in request_item_args:
+                processor_func, target_dict = rules[arg.sep]
+                value = processor_func(arg)
 
-            if arg.sep in SEPARATORS_GROUP_MULTIPART:
-                instance.multipart_data[arg.key] = value
+                if arg.sep in SEPARATORS_GROUP_MULTIPART:
+                    instance.multipart_data[arg.key] = value
 
-            if isinstance(target_dict, BaseMultiDict):
-                target_dict.add(arg.key, value)
-            else:
-                target_dict[arg.key] = value
+                if isinstance(target_dict, BaseMultiDict):
+                    target_dict.add(arg.key, value)
+                else:
+                    target_dict[arg.key] = value
+        except Exception:
+            close_request_files(instance.files)
+            raise
 
         return instance
 

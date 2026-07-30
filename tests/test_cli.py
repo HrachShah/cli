@@ -1,5 +1,6 @@
 """CLI argument parsing related tests."""
 import argparse
+from unittest import mock
 
 import pytest
 from requests.exceptions import InvalidSchema
@@ -8,6 +9,7 @@ import httpie.cli.argparser
 from httpie.cli import constants
 from httpie.cli.definition import parser
 from httpie.cli.argtypes import KeyValueArg, KeyValueArgType
+from httpie.cli.exceptions import ParseError
 from httpie.cli.requestitems import RequestItems
 from httpie.status import ExitStatus
 from httpie.utils import load_json_preserve_order_and_dupe_keys
@@ -133,6 +135,19 @@ class TestItemParsing:
             self.key_value_arg('file_field@' + FILE_PATH_ARG),
         ])
         assert len(items.files['file_field']) == 2
+
+    def test_file_fields_are_closed_when_a_later_item_fails(self):
+        first_file = self.key_value_arg('file_field@' + FILE_PATH_ARG)
+        invalid_item = self.key_value_arg('broken:=not-json')
+
+        with mock.patch('httpie.cli.requestitems.open', mock.mock_open()) as open_file:
+            with pytest.raises(ParseError):
+                RequestItems.from_args(
+                    [first_file, invalid_item],
+                    request_type=constants.RequestType.FORM,
+                )
+
+        open_file.return_value.close.assert_called_once_with()
 
     def test_multiple_text_fields_with_same_field_name(self):
         items = RequestItems.from_args(
