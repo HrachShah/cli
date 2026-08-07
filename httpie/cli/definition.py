@@ -7,6 +7,7 @@ from argparse import FileType
 from httpie import __doc__, __version__
 from httpie.cli.argtypes import (KeyValueArgType, SessionNameValidator,
                                  SSLCredentials, readable_file_arg,
+                                 positive_finite_float,
                                  response_charset_type, response_mime_type)
 from httpie.cli.constants import (BASE_OUTPUT_OPTIONS, DEFAULT_FORMAT_OPTIONS,
                                   OUT_REQ_BODY, OUT_REQ_HEAD, OUT_RESP_BODY,
@@ -756,7 +757,7 @@ network.add_argument(
 
 network.add_argument(
     '--timeout',
-    type=float,
+    type=positive_finite_float,
     default=0,
     metavar='SECONDS',
     short_help='The connection timeout of the request in seconds.',

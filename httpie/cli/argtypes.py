@@ -1,4 +1,5 @@
 import argparse
+import math
 import getpass
 import os
 import sys
@@ -273,3 +274,14 @@ def response_mime_type(mime_type: str) -> str:
         raise argparse.ArgumentTypeError(
             f'{mime_type!r} doesn’t look like a mime type; use type/subtype')
     return mime_type
+
+
+def positive_finite_float(value: str) -> float:
+    """Parse a timeout value that can be passed safely to requests."""
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a valid number") from exc
+    if parsed <= 0 or not math.isfinite(parsed):
+        raise argparse.ArgumentTypeError("value must be greater than zero and finite")
+    return parsed

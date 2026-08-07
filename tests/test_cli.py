@@ -7,7 +7,7 @@ from requests.exceptions import InvalidSchema
 import httpie.cli.argparser
 from httpie.cli import constants
 from httpie.cli.definition import parser
-from httpie.cli.argtypes import KeyValueArg, KeyValueArgType
+from httpie.cli.argtypes import KeyValueArg, KeyValueArgType, positive_finite_float
 from httpie.cli.requestitems import RequestItems
 from httpie.status import ExitStatus
 from httpie.utils import load_json_preserve_order_and_dupe_keys
@@ -375,3 +375,9 @@ class TestSchemes:
     def test_scheme_when_invoked_as_https(self, httpbin_secure):
         url = f'{httpbin_secure.host}:{httpbin_secure.port}'
         assert HTTP_OK in http(url, program_name='https')
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "inf", "-inf", "nan"])
+def test_timeout_rejects_non_positive_or_non_finite_values(value):
+    with pytest.raises(argparse.ArgumentTypeError):
+        positive_finite_float(value)
