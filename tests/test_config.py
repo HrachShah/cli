@@ -33,6 +33,16 @@ def test_config_file_not_valid(httpbin):
     assert 'invalid config file' in r.stderr
 
 
+def test_config_file_with_invalid_encoding(httpbin):
+    env = MockEnvironment()
+    env.create_temp_config_dir()
+    (env.config_dir / Config.FILENAME).write_bytes(b'\xff\xfe')
+    r = http(httpbin + '/get', env=env)
+    assert HTTP_OK in r
+    assert 'http: warning' in r.stderr
+    assert 'invalid config file' in r.stderr
+
+
 @pytest.mark.skipif(is_windows, reason='cannot chmod 000 on Windows')
 def test_config_file_inaccessible(httpbin):
     env = MockEnvironment()

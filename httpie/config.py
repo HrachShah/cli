@@ -67,10 +67,10 @@ def read_raw_config(config_type: str, path: Path) -> Dict[str, Any]:
         with path.open(encoding=UTF8) as f:
             try:
                 return json.load(f)
-            except ValueError as e:
+            except (UnicodeDecodeError, ValueError) as e:
                 raise ConfigFileError(
                     f'invalid {config_type} file: {e} [{path}]'
-                )
+                ) from e
     except FileNotFoundError:
         pass
     except OSError as e:
