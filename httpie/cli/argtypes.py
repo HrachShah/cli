@@ -270,7 +270,8 @@ def response_charset_type(encoding: str) -> str:
 
 
 def response_mime_type(mime_type: str) -> str:
-    if mime_type.count('/') != 1:
+    type_, separator, subtype = mime_type.partition('/')
+    if not separator or not type_ or not subtype:
         raise argparse.ArgumentTypeError(
             f'{mime_type!r} doesn’t look like a mime type; use type/subtype')
     return mime_type

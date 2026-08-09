@@ -74,3 +74,13 @@ def test_response_mime_option_invalid_mime_type(httpbin_both):
         tolerate_error_exit_status=True,
     )
     assert "'foobar' doesn’t look like a mime type" in r.stderr
+
+
+def test_response_mime_option_rejects_empty_parts(httpbin_both):
+    for value in ('/json', 'application/'):
+        r = http(
+            f'--response-mime={value}',
+            httpbin_both + '/get',
+            tolerate_error_exit_status=True,
+        )
+        assert f"{value!r} doesn’t look like a mime type" in r.stderr
