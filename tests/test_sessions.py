@@ -401,6 +401,14 @@ class TestExpiredCookies(CookieTestBase):
         ]
         assert get_expired_cookies(cookies, now=None) == expected_expired
 
+    def test_get_expired_cookies_respects_epoch_zero(self):
+        cookies = 'one=two; Max-Age=60; path=/'
+        assert get_expired_cookies(cookies, now=0) == []
+
+    def test_get_expired_cookies_handles_negative_max_age(self):
+        cookies = 'one=two; Max-Age=-1; path=/'
+        assert get_expired_cookies(cookies, now=100) == [{'name': 'one', 'path': '/'}]
+
     @pytest.mark.parametrize(
         'cookies, now, expected_expired',
         [

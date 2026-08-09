@@ -158,7 +158,8 @@ def get_expired_cookies(
     now: float = None
 ) -> List[dict]:
 
-    now = now or time.time()
+    if now is None:
+        now = time.time()
 
     def is_expired(expires: Optional[float]) -> bool:
         return expires is not None and expires <= now
@@ -196,8 +197,11 @@ def _max_age_to_expires(cookies, now):
         if 'expires' in cookie:
             continue
         max_age = cookie.get('max-age')
-        if max_age and max_age.isdigit():
-            cookie['expires'] = now + float(max_age)
+        if max_age is not None:
+            try:
+                cookie['expires'] = now + int(max_age)
+            except (TypeError, ValueError):
+                pass
 
 
 def parse_content_type_header(header):
